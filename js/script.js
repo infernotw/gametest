@@ -8,6 +8,8 @@ class Table {
      * stringDataObj @type {Object} - объект, внутрь которого будут записаны массивы
      * ei @type {number} - ID пустой клетки по горизонтали по умолчанию
      * ej @type {number} - ID пустой клетки по вертикали
+     * arrSqrt @type {number} - корень количества элементов массива
+     * chosenArr @type {number[]} - выбранный размер поля
      */
     constructor(options) {
         this._settings = { ...options };
@@ -20,10 +22,58 @@ class Table {
         this._ei = this._settings.ei;
         // изначальный ID пустой клетки по вертикали        
         this._ej = this._settings.ej;
+        // вычисление корня количества элементов массива
+        this._arrSqrt = this._settings.arrSqrt;
+        // получение изначально выбранного размера поля
+        this._chosenArr = [...this._settings.chosenArr];
 
         this._initConst();
         this._initEvt();
         this._startNewGame();
+    }
+
+    /**
+     * выбор размера поля
+     * @param {Object} evt 
+     */
+    _selectFieldSize(evt) {
+        const target = evt.target;
+        // копируем массив, чтобы он при каждом изменении был максимальной длины
+        this._chosenArr = this._arrayNumbers.slice();
+
+        // в зависимости от выбора режем массив
+        switch (target.value) {
+            case 'first':
+                // поле 3х3
+                this._chosenArr.splice(8, 16);
+                this._startNewGame();
+                return this._chosenArr;
+            case 'second':
+                // поле 4х4
+                this._chosenArr.splice(15, 9);
+                this._startNewGame();
+                return this._chosenArr;
+            case 'third':
+                // поле 5х5
+                this._startNewGame();
+                return this._chosenArr;
+        }
+    }
+
+    /**
+     * проверка массив на правильное количество элементов (9/16/25)
+     */
+    _checkSuccessArr() {
+        const arrLenght = this._chosenArr.length;
+
+        // получение корня
+        this._arrSqrt = Math.sqrt(arrLenght);
+
+        // если деление полученного корня на 3/4/5 будет равно нулю,
+        // то массив удовлетворяет требованиям дляА построеня таблицы
+        if (!!(this._arrSqrt % 3 == 0 || this._arrSqrt % 4 == 0 || this._arrSqrt % 5 == 0)) {
+            return true;
+        }
     }
 
     /**
@@ -35,19 +85,19 @@ class Table {
             j,
             temp;
 
-        for (let i = this._arrayNumbers.length - 1; i > 0; i--) {
+        for (let i = this._chosenArr.length - 1; i > 0; i--) {
             j = Math.floor(Math.random() * (i + 1));
-            temp = this._arrayNumbers[j];
-            this._arrayNumbers[j] = this._arrayNumbers[i];
-            this._arrayNumbers[i] = temp;
+            temp = this._chosenArr[j];
+            this._chosenArr[j] = this._chosenArr[i];
+            this._chosenArr[i] = temp;
         }
 
-        return this._arrayNumbers;
+        return this._chosenArr;
     }
 
     /**
      * делаю из массива объект с массивами
-     * если поле 4х4, то создаю объект с 4 массивами по 4 элемента на каждую строчку
+     * созадю поле, согласно arrSqrt
      */
     _getStringData() {
         let
@@ -55,17 +105,19 @@ class Table {
             stringNumber;
 
         // заполняю массив
-        this._arrayNumbers.forEach((el, i) => {
+        this._chosenArr.forEach((el, i) => {
             stringArr.push(el);
 
-            // если длина полученного массива равна 4,
+            // если длина полученного массива равна arrSqrt,
             // то записываю массив в объект и обнуляю его
-            if (stringArr.length === 4) {
+            if (stringArr.length === this._arrSqrt) {
                 // задаю номера строчек, которым соответствует каждый массив
-                if (i < 8) {
-                    stringNumber = i > 4 ? 1 : 0;
+                if (i < this._arrSqrt * 2) {
+                    stringNumber = i > this._arrSqrt ? 1 : 0;
+                } else if (i < this._arrSqrt * 4) {
+                    stringNumber = i > this._arrSqrt * 3 ? 3 : 2;
                 } else {
-                    stringNumber = i > 12 ? 3 : 2;
+                    stringNumber = 4;
                 }
 
                 this._stringDataObj[stringNumber] = stringArr;
@@ -83,6 +135,12 @@ class Table {
             row,
             cell;
 
+            // если в одном из заданных массивов не хватает/избыток элементов,
+            // то выдаю ошибку
+        if (!this._checkSuccessArr()) {
+            alert('Неверное количество элементов в массиве')
+        }
+
         // обнуляю тело поля
         this.body.innerHTML = '';
 
@@ -90,7 +148,7 @@ class Table {
         this.body.appendChild(tbody);
 
         // создаю строчки
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < this._arrSqrt; i++) {
             row = document.createElement('tr');
 
             tbody.appendChild(row);
@@ -147,19 +205,19 @@ class Table {
         const target = evt.target;
 
         // нахожу индекс пустой клетки в массиве
-        this._arrayNumbers.find((el, i) => {
+        this._chosenArr.find((el, i) => {
             if (el === '') {
                 nullCell = i;
             }
         });
 
         // меняю положения элементов в массиве
-        this._arrayNumbers.forEach((el, i) => {
+        this._chosenArr.forEach((el, i) => {
             if (el === target.innerHTML) {
                 // меняю элемент нажатой клетки на пустую строку
-                this._arrayNumbers[i] = this._arrayNumbers[nullCell];
+                this._chosenArr[i] = this._chosenArr[nullCell];
                 // элемент пустой строки заполняю данными нажатой клетки
-                this._arrayNumbers[nullCell] = target.innerHTML;
+                this._chosenArr[nullCell] = target.innerHTML;
             }
         });
     }
@@ -170,7 +228,7 @@ class Table {
     _getWinMessage() {
         // пробегаю весь массив, если все цифры соответстуют парвильному порядку, 
         // то показываю alert о победе
-        const isDontPass = !!this._arrayNumbers.find((el, i) => {
+        const isDontPass = !!this._chosenArr.find((el, i) => {
             const elNumber = parseInt(el);
 
             // если elNumber не null или undefinded И не соответствует (индексу + 1), то победу не засчитываю
@@ -188,7 +246,7 @@ class Table {
      * нахожу ID по горизонтали и вертикали пустой клетки
      */
     _findClearCell() {
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < this._arrSqrt; i++) {
             this._stringDataObj[i].forEach((el, j) => {
                 if (el === '') {
                     this._ei = i;
@@ -202,6 +260,7 @@ class Table {
      * начинаю новую игру
      */
     _startNewGame() {
+        this._checkSuccessArr();
         this._shuffleArray();
         this._getStringData();
         this._fillTableBody();
@@ -210,11 +269,13 @@ class Table {
     _initConst() {
         this.body = document.querySelector('.table');
         this.button = document.querySelector('button');
+        this.buttonSelect = document.querySelector('select');
     }
 
     _initEvt() {
         this.body.addEventListener('click', this._cellClick.bind(this));
         this.button.addEventListener('click', this._startNewGame.bind(this));
+        this.buttonSelect.addEventListener('change', this._selectFieldSize.bind(this));
     }
 }
 
@@ -222,5 +283,7 @@ new Table({
     ei: null,
     ej: null,
     stringDataObj: {},
-    arrayNumbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '']
+    arrayNumbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', ''],
+    arrSqrt: null,
+    chosenArr: ['1', '2', '3', '4', '5', '6', '7', '8', '']
 });

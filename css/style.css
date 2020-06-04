@@ -18,6 +18,16 @@
     box-sizing: border-box;
 }
 
+.menu {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+.menu-text {
+    margin-right: 5px;
+}
+
 button {
     display: flex;
     margin: 0 auto;
