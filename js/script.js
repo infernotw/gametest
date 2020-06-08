@@ -10,6 +10,10 @@ class Table {
     * ej @type {number} - ID пустой клетки по вертикали
     * arrSqrt @type {number} - корень количества элементов массива
     * chosenArr @type {number[]} - выбранный размер поля
+    * timeCount @type {number} - количество прошедшего времени
+    * isFirstStart @type {boolean} - проверка первого запуска игры
+    * timerInterval @type {number} - счетчик времени
+    * timeMin @type {number} - количество прошедших минут
     */
    constructor(options) {
       this._settings = {
@@ -19,17 +23,16 @@ class Table {
       // копирование массива с числами
       this._arrayNumbers = [...this._settings.arrayNumbers];
       // копирование объекта для заполнения массивами
-      this._stringDataObj = {
-         ...this._settings.stringDataObj
-      };
-      // изначальное ID положения пустой клетки по горизонтали
+      this._stringDataObj = { ...this._settings.stringDataObj };
       this._ei = this._settings.ei;
-      // изначальный ID пустой клетки по вертикали        
       this._ej = this._settings.ej;
-      // вычисление корня количества элементов массива
       this._arrSqrt = this._settings.arrSqrt;
       // получение изначально выбранного размера поля
       this._chosenArr = [...this._settings.chosenArr];
+      this._timeCount = this._settings.timeCount;
+      this._isFirstStart = this._settings.isFirstStart;
+      this._timerInterval = this._settings.timerInterval;
+      this._timeMin = this._settings.timeMin;
 
       this._initConst();
       this._initEvt();
@@ -147,6 +150,7 @@ class Table {
 
       // обнуляю тело поля
       this.body.innerHTML = '';
+      this.timer.innerHTML = '0:00';
 
       tbody = document.createElement('tbody');
       this.body.appendChild(tbody);
@@ -204,6 +208,69 @@ class Table {
    }
 
    /**
+    * проверка первого нажатия, если игра уже запущена, то таймер снова не запускается
+    */
+   _bodyClick() {
+      if (this._isFirstStart) {
+         this._isFirstStart = false;
+
+         // установка таймера
+         this._timerInterval = setInterval(this._setTimer.bind(this), 1000);
+      }
+   }
+
+   /**
+    * регулировка таймера, установка отображения на странице
+    */
+   _setTimer() {
+      this._timeCount++;
+
+      const
+         secString = this._timeCount.toString(),
+         secLength = secString.length,
+         min = this._timeCount - (60 * this._timeMin),
+         minString = min.toString(),
+         minLength = minString.length;
+
+      if (this._timeCount < 60) {
+         this._setTimeNumbers(secLength, null, secString, null);
+      } else if (!(this._timeCount % 60)) {
+         this._timeMin++;
+         this.timer.innerHTML = this._timeMin + ':00';
+      } else {
+         this._setTimeNumbers(null, minLength, null, minString);
+      }
+   }
+
+   /**
+    * установка отображения чисел на странице, приведение к минутам и секундам
+    * @param {number} secLength длина строки, показывающей секунды
+    * @param {number} minLength длина числа, показывающей минуты 
+    * @param {string} secString строка секунд
+    * @param {string} minString строка минут
+    */
+   _setTimeNumbers(secLength, minLength, secString, minString) {
+      switch (this._timeCount < 60 ? secLength : minLength) {
+         case 1:
+            this._timeCount < 60 ? this.timer.innerHTML = '0:0' + secString : this.timer.innerHTML = this._timeMin + ':0' + minString;
+            break;
+         case 2:
+            this._timeCount < 60 ? this.timer.innerHTML = '0:' + secString.slice(0, 1) + secString.slice(1, 2) : this.timer.innerHTML = this._timeMin + ':' + minString.slice(0, 1) + minString.slice(1, 2);
+            break;
+      }
+   }
+
+   /**
+    * обнуление таймера
+    */
+   _resetTimer() {
+      this._timeCount = 0;
+      this._timeMin = 0;
+      this._isFirstStart = true;
+      clearInterval(this._timerInterval);
+   }
+
+   /**
     * меняю последовательность элементов после клика в скопированном массиве
     * @param {Object} evt 
     */
@@ -245,7 +312,9 @@ class Table {
       });
 
       if (!isDontPass) {
-         alert('Победа!');
+         alert('Вы победили! Ваше время:' + ' ' + this.timer.innerHTML);
+         // остановка таймера
+         clearInterval(this._timerInterval);
       }
    }
 
@@ -256,6 +325,7 @@ class Table {
       this._checkSuccessArr();
       this._shuffleArray();
       this._getStringData();
+      this._resetTimer();
       this._fillTableBody();
    }
 
@@ -263,10 +333,12 @@ class Table {
       this.body = document.querySelector('.table');
       this.button = document.querySelector('button');
       this.buttonSelect = document.querySelector('select');
+      this.timer = document.querySelector('.timer-text');
    }
 
    _initEvt() {
       this.body.addEventListener('click', this._cellClick.bind(this));
+      this.body.addEventListener('click', this._bodyClick.bind(this));
       this.button.addEventListener('click', this._startNewGame.bind(this));
       this.buttonSelect.addEventListener('change', this._selectFieldSize.bind(this));
    }
@@ -278,5 +350,9 @@ new Table({
    stringDataObj: {},
    arrayNumbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', ''],
    arrSqrt: null,
-   chosenArr: ['1', '2', '3', '4', '5', '6', '7', '8', '']
+   chosenArr: ['1', '2', '3', '4', '5', '6', '7', '8', ''],
+   timeCount: null,
+   timeMin: null,
+   isFirstStart: true,
+   timerInterval: null
 });
