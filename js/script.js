@@ -1,5 +1,17 @@
 'use strict';
 
+const aaa = {
+   body: document.querySelector('.table'),
+   button: document.querySelector('button'),
+   buttonSelect: document.querySelector('select'),
+   timer: document.querySelector('.timer-text'),
+   startTime: '0:00',
+   first: 'first',
+   third: 'third',
+   // секунд в минуте
+   minute: 60
+}
+
 class Table {
    /**
     * полученные аргументы из new Table
@@ -37,7 +49,6 @@ class Table {
       this._chosenArr = this._arrayNumbers.slice();
       this._chosenArr.splice(this._smallField - 1, this._arrayNumbers.length - this._smallField);
 
-      this._initConst();
       this._initEvt();
       this._startNewGame();
    }
@@ -47,18 +58,15 @@ class Table {
     * @param {Object} evt 
     */
    _selectFieldSize(evt) {
-      const
-         target = evt.target,
-         first = 'first',
-         third = 'third';
+      const target = evt.target
       let count;
 
       // копируем массив, чтобы он при каждом изменении был максимальной длины
       this._chosenArr = this._arrayNumbers.slice();
 
       // в зависимости от выбора режем массив
-      if (target.value !== third) {
-         count = target.value === first ? this._smallField : this._mediumField;
+      if (target.value !== aaa.third) {
+         count = target.value === aaa.first ? this._smallField : this._mediumField;
 
          this._chosenArr.splice(count - 1, this._arrayNumbers.length - count);
       }
@@ -147,11 +155,11 @@ class Table {
       }
 
       // обнуляю тело поля
-      this.body.innerHTML = '';
-      this.timer.innerHTML = '0:00';
+      aaa.body.innerHTML = '';
+      aaa.timer.innerHTML = aaa.startTime;
 
       tbody = document.createElement('tbody');
-      this.body.appendChild(tbody);
+      aaa.body.appendChild(tbody);
 
       // создаю строчки
       for (let i = 0; i < this._arrSqrt; i++) {
@@ -225,7 +233,7 @@ class Table {
 
       const
          // определение секунд без минут
-         secMin = this._timeCount - (60 * this._timeMin),
+         secMin = this._timeCount - (aaa.minute * this._timeMin),
          secString = secMin.toString(),
          secLength = secString.length;
 
@@ -234,9 +242,9 @@ class Table {
 
       // определяю момент, когда количество секунд будет составлять минуту (60 сек = 1 мин)
       // и отображаю на странице минут:00 секунд
-      if (!(this._timeCount % 60)) {
+      if (!(this._timeCount % aaa.minute)) {
          this._timeMin++;
-         this.timer.innerHTML = this._timeMin + ':00';
+         aaa.timer.innerHTML = this._timeMin + ':00';
       }
    }
 
@@ -248,10 +256,10 @@ class Table {
    _setTimeNumbers(secString, secLength) {
       switch (secLength) {
          case 1:
-            this.timer.innerHTML = this._timeMin ? this._timeMin + ':0' + secString : '0:0' + secString;
+            aaa.timer.innerHTML = this._timeMin ? this._timeMin + ':0' + secString : '0:0' + secString;
             break;
          case 2:
-            this.timer.innerHTML = this._timeMin ? this._timeMin + ':' + secString.slice(0, 1) + secString.slice(1, 2) : '0:' + secString.slice(0, 1) + secString.slice(1, 2);
+            aaa.timer.innerHTML = this._timeMin ? this._timeMin + ':' + secString.slice(0, 1) + secString.slice(1, 2) : '0:' + secString.slice(0, 1) + secString.slice(1, 2);
             break;
       }
    }
@@ -308,7 +316,7 @@ class Table {
       });
 
       if (!isDontPass) {
-         alert('Вы победили! Ваше время:' + ' ' + this.timer.innerHTML);
+         alert('Вы победили! Ваше время:' + ' ' + aaa.timer.innerHTML);
          // остановка таймера
          clearInterval(this._timerInterval);
       }
@@ -325,18 +333,11 @@ class Table {
       this._fillTableBody();
    }
 
-   _initConst() {
-      this.body = document.querySelector('.table');
-      this.button = document.querySelector('button');
-      this.buttonSelect = document.querySelector('select');
-      this.timer = document.querySelector('.timer-text');
-   }
-
    _initEvt() {
-      this.body.addEventListener('click', this._cellClick.bind(this));
-      this.body.addEventListener('click', this._bodyClick.bind(this));
-      this.button.addEventListener('click', this._startNewGame.bind(this));
-      this.buttonSelect.addEventListener('change', this._selectFieldSize.bind(this));
+      aaa.body.addEventListener('click', this._cellClick.bind(this));
+      aaa.body.addEventListener('click', this._bodyClick.bind(this));
+      aaa.button.addEventListener('click', this._startNewGame.bind(this));
+      aaa.buttonSelect.addEventListener('change', this._selectFieldSize.bind(this));
    }
 }
 
