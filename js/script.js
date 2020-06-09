@@ -5,7 +5,6 @@ class Table {
     * полученные аргументы из new Table
     * @param {Object} options
     * arrayNumbers @type {number[]} - массив с числами
-    * chosenArr @type {number[]} - выбранный размер поля
     */
    constructor(options) {
       this._settings = { ...options };
@@ -48,28 +47,24 @@ class Table {
     * @param {Object} evt 
     */
    _selectFieldSize(evt) {
-      const target = evt.target;
+      const
+         target = evt.target,
+         first = 'first',
+         third = 'third';
+      let count;
 
       // копируем массив, чтобы он при каждом изменении был максимальной длины
       this._chosenArr = this._arrayNumbers.slice();
 
       // в зависимости от выбора режем массив
-      switch (target.value) {
-         case 'first':
-            // поле 3х3
-            this._chosenArr.splice(this._smallField - 1, this._arrayNumbers.length - this._smallField);
-            this._startNewGame();
-            return this._chosenArr;
-         case 'second':
-            // поле 4х4
-            this._chosenArr.splice(this._mediumField - 1, this._arrayNumbers.length - this._mediumField);
-            this._startNewGame();
-            return this._chosenArr;
-         case 'third':
-            // поле 5х5
-            this._startNewGame();
-            return this._chosenArr;
+      if (target.value !== third) {
+         count = target.value === first ? this._smallField : this._mediumField;
+
+         this._chosenArr.splice(count - 1, this._arrayNumbers.length - count);
       }
+
+      this._startNewGame();
+      return this._chosenArr;
    }
 
    /**
@@ -87,8 +82,8 @@ class Table {
       // получение корня выбранного поля
       this._arrSqrt = Math.sqrt(arrLength);
 
-      // если изначальный массив не удовлетворяет условиям, то выдаю ошибку
-      if ((sourceSqrt ^ 0) === sourceSqrt && !(sourceSqrt % 1)) {
+      // если корень изначального массива делится на 1 без остатка, то массив подходит
+      if (!(sourceSqrt % 1)) {
          return true;
       }
    }
