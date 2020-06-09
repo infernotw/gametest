@@ -5,34 +5,38 @@ class Table {
     * полученные аргументы из new Table
     * @param {Object} options
     * arrayNumbers @type {number[]} - массив с числами
-    * stringDataObj @type {Object} - объект, внутрь которого будут записаны массивы
-    * ei @type {number} - ID пустой клетки по горизонтали по умолчанию
-    * ej @type {number} - ID пустой клетки по вертикали
-    * arrSqrt @type {number} - корень количества элементов массива
     * chosenArr @type {number[]} - выбранный размер поля
-    * timeCount @type {number} - количество прошедшего времени
-    * isFirstStart @type {boolean} - проверка первого запуска игры
-    * timerInterval @type {number} - счетчик времени
-    * timeMin @type {number} - количество прошедших минут
     */
    constructor(options) {
-      this._settings = {
-         ...options
-      };
+      this._settings = { ...options };
 
       // копирование массива с числами
       this._arrayNumbers = [...this._settings.arrayNumbers];
-      // копирование объекта для заполнения массивами
-      this._stringDataObj = { ...this._settings.stringDataObj };
-      this._ei = this._settings.ei;
-      this._ej = this._settings.ej;
-      this._arrSqrt = this._settings.arrSqrt;
+      // объект, внутрь которого будут записаны массивы
+      this._stringDataObj = this._settings.stringDataObj ? { ...this._settings.stringDataObj } : {};
+      // ID пустой клетки по горизонтали
+      this._ei = null;
+      // ID пустой клетки по вертикали
+      this._ej = null;
+      // корень количества элементов массива
+      this._arrSqrt = null;
+      // количество прошедшего времени
+      this._timeCount = 0;
+      // первый запуск игры
+      this._isFirstStart = true;
+      // счетчик времени
+      this._timerInterval = null;
+      // количество прошедших минут
+      this._timeMin = 0;
+      // размер маленького поля
+      this._smallField = 9;
+      // размер среднего поля
+      this._mediumField = 16;
+      // размер большого поля
+      this._largeField = 25;
       // получение изначально выбранного размера поля
-      this._chosenArr = [...this._settings.chosenArr];
-      this._timeCount = this._settings.timeCount;
-      this._isFirstStart = this._settings.isFirstStart;
-      this._timerInterval = this._settings.timerInterval;
-      this._timeMin = this._settings.timeMin;
+      this._chosenArr = this._arrayNumbers.slice();
+      this._chosenArr.splice(this._smallField - 1, this._arrayNumbers.length - this._smallField);
 
       this._initConst();
       this._initEvt();
@@ -45,6 +49,7 @@ class Table {
     */
    _selectFieldSize(evt) {
       const target = evt.target;
+
       // копируем массив, чтобы он при каждом изменении был максимальной длины
       this._chosenArr = this._arrayNumbers.slice();
 
@@ -52,12 +57,12 @@ class Table {
       switch (target.value) {
          case 'first':
             // поле 3х3
-            this._chosenArr.splice(8, 16);
+            this._chosenArr.splice(this._smallField - 1, this._arrayNumbers.length - this._smallField);
             this._startNewGame();
             return this._chosenArr;
          case 'second':
             // поле 4х4
-            this._chosenArr.splice(15, 9);
+            this._chosenArr.splice(this._mediumField - 1, this._arrayNumbers.length - this._mediumField);
             this._startNewGame();
             return this._chosenArr;
          case 'third':
@@ -68,17 +73,22 @@ class Table {
    }
 
    /**
-    * проверка массив на правильное количество элементов (9/16/25)
+    * проверка массив на правильное количество элементов
     */
    _checkSuccessArr() {
-      const arrLenght = this._chosenArr.length;
+      let sourceSqrt;
+      const
+         sourceLength = this._arrayNumbers.length,
+         arrLength = this._chosenArr.length;
 
-      // получение корня
-      this._arrSqrt = Math.sqrt(arrLenght);
 
-      // если деление полученного корня на 3/4/5 будет равно нулю,
-      // то массив удовлетворяет требованиям для построеня таблицы
-      if (!(this._arrSqrt % 3) || !(this._arrSqrt % 4) || !(this._arrSqrt % 5)) {
+      // получение корня всего массива
+      sourceSqrt = Math.sqrt(sourceLength);
+      // получение корня выбранного поля
+      this._arrSqrt = Math.sqrt(arrLength);
+
+      // если изначальный массив не удовлетворяет условиям, то выдаю ошибку
+      if ((sourceSqrt ^ 0) === sourceSqrt && !(sourceSqrt % 1)) {
          return true;
       }
    }
@@ -109,25 +119,17 @@ class Table {
    _getStringData() {
       let
          stringArr = [],
-         stringNumber;
+         stringNumber = 0;
 
       // заполняю массив
-      this._chosenArr.forEach((el, i) => {
+      this._chosenArr.forEach(el => {
          stringArr.push(el);
 
          // если длина полученного массива равна arrSqrt,
-         // то записываю массив в объект и обнуляю его
+         // то записываю массив в объект и обнуляю его      
          if (stringArr.length === this._arrSqrt) {
-            // задаю номера строчек, которым соответствует каждый массив
-            if (i < this._arrSqrt * 2) {
-               stringNumber = i > this._arrSqrt ? 1 : 0;
-            } else if (i < this._arrSqrt * 4) {
-               stringNumber = i > this._arrSqrt * 3 ? 3 : 2;
-            } else {
-               stringNumber = 4;
-            }
-
             this._stringDataObj[stringNumber] = stringArr;
+            stringNumber++;
             stringArr = [];
          }
       });
@@ -145,7 +147,8 @@ class Table {
       // если в одном из заданных массивов не хватает/избыток элементов,
       // то выдаю ошибку
       if (!this._checkSuccessArr()) {
-         alert('Неверное количество элементов в массиве')
+         alert('Неверное количество элементов в массиве');
+         return;
       }
 
       // обнуляю тело поля
@@ -166,7 +169,7 @@ class Table {
             cell = document.createElement('td');
             cell.textContent = el;
             // даю каждому полю свой ID, которы будет зависить от положения 
-            cell.id = i + ' ' + j;
+            cell.id = `${i} ${j}`;
 
             // нахожу ID пустой клетки
             if (!el) {
@@ -195,7 +198,7 @@ class Table {
       // проверяю нажатую клетку по горизонтали или вертикали,
       // если она находится на той же горизонтали или вертикали и на расстоянии 1 клетки (вправо или влево), то выполняю условие
       if ((i == this._ei && Math.abs(j - this._ej) == 1) || (j == this._ej && Math.abs(i - this._ei) == 1)) {
-         document.getElementById(this._ei + ' ' + this._ej).innerHTML = target.innerHTML;
+         document.getElementById(`${this._ei} ${this._ej}`).innerHTML = target.innerHTML;
          this._changeArrOrder(evt);
          target.innerHTML = '';
          // устанавливаю новые значения пустой клетки
@@ -226,36 +229,34 @@ class Table {
       this._timeCount++;
 
       const
-         secString = this._timeCount.toString(),
-         secLength = secString.length,
-         min = this._timeCount - (60 * this._timeMin),
-         minString = min.toString(),
-         minLength = minString.length;
+         // определение секунд без минут
+         secMin = this._timeCount - (60 * this._timeMin),
+         secString = secMin.toString(),
+         secLength = secString.length;
 
-      if (this._timeCount < 60) {
-         this._setTimeNumbers(secLength, null, secString, null);
-      } else if (!(this._timeCount % 60)) {
+      // устанавливаю отображение чисел на странице
+      this._setTimeNumbers(secString, secLength);
+
+      // определяю момент, когда количество секунд будет составлять минуту (60 сек = 1 мин)
+      // и отображаю на странице минут:00 секунд
+      if (!(this._timeCount % 60)) {
          this._timeMin++;
          this.timer.innerHTML = this._timeMin + ':00';
-      } else {
-         this._setTimeNumbers(null, minLength, null, minString);
       }
    }
 
    /**
-    * установка отображения чисел на странице, приведение к минутам и секундам
-    * @param {number} secLength длина строки, показывающей секунды
-    * @param {number} minLength длина числа, показывающей минуты 
+    * установка отображения чисел на странице
     * @param {string} secString строка секунд
-    * @param {string} minString строка минут
+    * @param {number} secLength длина строки, показывающей секунды
     */
-   _setTimeNumbers(secLength, minLength, secString, minString) {
-      switch (this._timeCount < 60 ? secLength : minLength) {
+   _setTimeNumbers(secString, secLength) {
+      switch (secLength) {
          case 1:
-            this._timeCount < 60 ? this.timer.innerHTML = '0:0' + secString : this.timer.innerHTML = this._timeMin + ':0' + minString;
+            this.timer.innerHTML = this._timeMin ? this._timeMin + ':0' + secString : '0:0' + secString;
             break;
          case 2:
-            this._timeCount < 60 ? this.timer.innerHTML = '0:' + secString.slice(0, 1) + secString.slice(1, 2) : this.timer.innerHTML = this._timeMin + ':' + minString.slice(0, 1) + minString.slice(1, 2);
+            this.timer.innerHTML = this._timeMin ? this._timeMin + ':' + secString.slice(0, 1) + secString.slice(1, 2) : '0:' + secString.slice(0, 1) + secString.slice(1, 2);
             break;
       }
    }
@@ -300,7 +301,7 @@ class Table {
     * условия показа сообщения о победе
     */
    _getWinMessage() {
-      // пробегаю весь массив, если все цифры соответстуют парвильному порядку, 
+      // проверяю весь массив, если все цифры соответстуют парвильному порядку, 
       // то показываю alert о победе
       const isDontPass = !!this._chosenArr.find((el, i) => {
          const elNumber = parseInt(el);
@@ -345,14 +346,5 @@ class Table {
 }
 
 new Table({
-   ei: null,
-   ej: null,
-   stringDataObj: {},
-   arrayNumbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', ''],
-   arrSqrt: null,
-   chosenArr: ['1', '2', '3', '4', '5', '6', '7', '8', ''],
-   timeCount: null,
-   timeMin: null,
-   isFirstStart: true,
-   timerInterval: null
+   arrayNumbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '']
 });
