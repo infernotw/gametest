@@ -1,121 +1,194 @@
 'use strict';
 
-class Table {
-    /**
-     * полученные аргументы из new Table
-     * @param {Object} options
-     * arrayNumbers @type {number[]} - массив с числами
-     * stringDataObj @type {Object} - объект, внутрь которого будут записаны массивы
-     * ei @type {number} - ID пустой клетки по горизонтали по умолчанию
-     * ej @type {number} - ID пустой клетки по вертикали
-     */
-    constructor(options) {
-        this._settings = { ...options };
+// сделал IIFE, чтобы переменные не были доступны из консоли
+(() => {
+   const CONSTANTS = {
+      startTime: '0:00',
+      first: 'first',
+      third: 'third',
+      // секунд в минуте
+      minute: 60,
+      // размер поля
+      count: null,
+      // размер маленького поля
+      smallField: 9,
+      // размер среднего поля
+      mediumField: 16,
+   };
 
-        // копирование массива с числами
-        this._arrayNumbers = [...this._settings.arrayNumbers];
-        // копирование объекта для заполнения массивами
-        this._stringDataObj = { ...this._settings.stringDataObj };
-        // изначальное ID положения пустой клетки по горизонтали
-        this._ei = this._settings.ei;
-        // изначальный ID пустой клетки по вертикали        
-        this._ej = this._settings.ej;
+   class Table {
+      /**
+       * полученные аргументы из new Table
+       * @param {Object} options
+       * arrayNumbers @type {number[]} - массив с числами
+       */
+      constructor(options) {
+         this._settings = { ...options };
 
-        this._initConst();
-        this._initEvt();
-        this._startNewGame();
-    }
+         // копирование массива с числами
+         this._arrayNumbers = [...this._settings.arrayNumbers];
+         // объект, внутрь которого будут записаны массивы
+         this._stringDataObj = this._settings.stringDataObj ? { ...this._settings.stringDataObj } : {};
+         // ID пустой клетки по горизонтали
+         this._ei = null;
+         // ID пустой клетки по вертикали
+         this._ej = null;
+         // корень количества элементов массива
+         this._arrSqrt = null;
+         // количество прошедшего времени
+         this._timeCount = 0;
+         // первый запуск игры
+         this._isFirstStart = true;
+         // счетчик времени
+         this._timerInterval = null;
+         // количество прошедших минут
+         this._timeMin = 0;
+         // получение изначально выбранного размера поля
+         this._chosenArr = this._arrayNumbers.slice();
+         this._chosenArr.splice(CONSTANTS.smallField - 1, this._arrayNumbers.length - CONSTANTS.smallField);
 
-    /**
-     * перемешиваю изначальный массив данных
-     * @returns {Array}
-     */
-    _shuffleArray() {
-        let
+         this._initConst();
+         this._initEvt();
+         this._startNewGame();
+      }
+
+      /**
+       * выбор размера поля
+       * @param {Object} evt 
+       */
+      _selectFieldSize(evt) {
+         const target = evt.target;
+
+         // копируем массив, чтобы он при каждом изменении был максимальной длины
+         this._chosenArr = this._arrayNumbers.slice();
+
+         // в зависимости от выбора режем массив
+         if (target.value !== CONSTANTS.third) {
+            CONSTANTS.count = target.value === CONSTANTS.first ? CONSTANTS.smallField : CONSTANTS.mediumField;
+
+            this._chosenArr.splice(CONSTANTS.count - 1, this._arrayNumbers.length - CONSTANTS.count);
+         }
+
+         this._startNewGame();
+         return this._chosenArr;
+      }
+
+      /**
+       * проверка массив на правильное количество элементов
+       * @returns {boolean}
+       */
+      _checkSuccessArr() {
+         const
+            sourceLength = this._arrayNumbers.length,
+            arrLength = this._chosenArr.length;
+         let sourceSqrt;
+
+         // получение корня всего массива
+         sourceSqrt = Math.sqrt(sourceLength);
+         // получение корня выбранного поля
+         this._arrSqrt = Math.sqrt(arrLength);
+
+         // если корень изначального массива делится на 1 без остатка, то массив подходит
+         return !(sourceSqrt % 1);
+      }
+
+      /**
+       * перемешиваю изначальный массив данных
+       * @returns {Array}
+       */
+      _shuffleArray() {
+         let
             j,
             temp;
 
-        for (let i = this._arrayNumbers.length - 1; i > 0; i--) {
+         for (let i = this._chosenArr.length - 1; i > 0; i--) {
             j = Math.floor(Math.random() * (i + 1));
-            temp = this._arrayNumbers[j];
-            this._arrayNumbers[j] = this._arrayNumbers[i];
-            this._arrayNumbers[i] = temp;
-        }
+            temp = this._chosenArr[j];
+            this._chosenArr[j] = this._chosenArr[i];
+            this._chosenArr[i] = temp;
+         }
 
-        return this._arrayNumbers;
-    }
+         return this._chosenArr;
+      }
 
-    /**
-     * делаю из массива объект с массивами
-     * если поле 4х4, то создаю объект с 4 массивами по 4 элемента на каждую строчку
-     */
-    _getStringData() {
-        let
+      /**
+       * делаю из массива объект с массивами
+       * созадю поле, согласно arrSqrt
+       * @returns {boolean|void}
+       */
+      _getStringData() {
+         let
             stringArr = [],
-            stringNumber;
+            // номер строки
+            number = 0;
 
-        // заполняю массив
-        this._arrayNumbers.forEach((el, i) => {
+         // заполняю массив
+         this._chosenArr.forEach(el => {
             stringArr.push(el);
 
-            // если длина полученного массива равна 4,
-            // то записываю массив в объект и обнуляю его
-            if (stringArr.length === 4) {
-                // задаю номера строчек, которым соответствует каждый массив
-                if (i < 8) {
-                    stringNumber = i > 4 ? 1 : 0;
-                } else {
-                    stringNumber = i > 12 ? 3 : 2;
-                }
-
-                this._stringDataObj[stringNumber] = stringArr;
-                stringArr = [];
+            // если длина полученного массива равна arrSqrt,
+            // то записываю массив в объект и обнуляю его      
+            if (stringArr.length === this._arrSqrt) {
+               this._stringDataObj[number] = stringArr;
+               number++;
+               stringArr = [];
             }
-        });
-    }
+         });
+      }
 
-    /**
-     * создаю игровое поле и отрисовываю данные
-     */
-    _fillTableBody() {
-        let
+      /**
+       * создаю игровое поле и отрисовываю данные
+       */
+      _fillTableBody() {
+         let
             tbody,
             row,
             cell;
 
-        // обнуляю тело поля
-        this.body.innerHTML = '';
+         // если в одном из заданных массивов не хватает/избыток элементов,
+         // то выдаю ошибку
+         if (!this._checkSuccessArr()) {
+            alert('Неверное количество элементов в массиве');
+            return;
+         }
 
-        tbody = document.createElement('tbody');
-        this.body.appendChild(tbody);
+         // обнуляю тело поля
+         this.body.innerHTML = '';
+         this.timer.innerHTML = CONSTANTS.startTime;
 
-        // создаю строчки
-        for (let i = 0; i < 4; i++) {
+         tbody = document.createElement('tbody');
+         this.body.appendChild(tbody);
+
+         // создаю строчки
+         for (let i = 0; i < this._arrSqrt; i++) {
             row = document.createElement('tr');
 
             tbody.appendChild(row);
 
             // создаю поля в строчках
             this._stringDataObj[i].forEach((el, j) => {
-                cell = document.createElement('td');
-                cell.textContent = el;
-                // даю каждому полю свой ID, которы будет зависить от положения 
-                cell.id = i + ' ' + j;
+               cell = document.createElement('td');
+               cell.textContent = el;
+               // даю каждому полю свой ID, которы будет зависить от положения 
+               cell.id = `${i} ${j}`;
 
-                row.appendChild(cell);
+               // нахожу ID пустой клетки
+               if (!el) {
+                  this._ei = i;
+                  this._ej = j;
+               }
+
+               row.appendChild(cell);
             });
-        }
+         }
+      }
 
-        // нахожу пустую клетку
-        this._findClearCell();
-    }
-
-    /**
-     * обработка события по клику на клетки
-     * @param {Object} evt 
-     */
-    _cellClick(evt) {
-        const
+      /**
+       * обработка события по клику на клетки
+       * @param {Object} evt 
+       */
+      _cellClick(evt) {
+         const
             target = evt.target,
             // получаю id
             // по горизонтали
@@ -123,104 +196,157 @@ class Table {
             // по вертикали
             j = target.id.charAt(2);
 
-        // проверяю нажатую клетку по горизонтали или вертикали,
-        // если она находится на той же горизонтали или вертикали и на расстоянии 1 клетки (вправо или влево), то выполняю условие
-        if ((i == this._ei && Math.abs(j - this._ej) == 1) || (j == this._ej && Math.abs(i - this._ei) == 1)) {
-            document.getElementById(this._ei + ' ' + this._ej).innerHTML = target.innerHTML;
+         // проверяю нажатую клетку по горизонтали или вертикали,
+         // если она находится на той же горизонтали или вертикали и на расстоянии 1 клетки (вправо или влево), то выполняю условие
+         if (this._getCloseCell(i, this._ei, j, this._ej) || this._getCloseCell(j, this._ej, i, this._ei)) {
+            document.getElementById(`${this._ei} ${this._ej}`).innerHTML = target.innerHTML;
             this._changeArrOrder(evt);
             target.innerHTML = '';
             // устанавливаю новые значения пустой клетки
             this._ei = i;
             this._ej = j;
-        }
+         }
 
-        // если после нажатия все клетки в правильной последовательности, то показываю победное сообщение
-        this._getWinMessage();
-    }
+         // если после нажатия все клетки в правильной последовательности, то показываю сообщение о победе
+         setTimeout(this._checkWinState.bind(this), 10);
+      }
 
-    /**
-     * меняю последовательность элементов после клика в скопированном массиве
-     * @param {Object} evt 
-     */
-    _changeArrOrder(evt) {
-        let nullCell;
-        const target = evt.target;
+      /**
+       * поиск клетки, с которой можно будет взаимодействовать по горизонтали или вертикали
+       * так как одни id:string, а другие:number, то сравнение не строгое
+       * @param {string} idFrst первый id клетки 
+       * @param {number} nullIdFrst первый id пустой клетки
+       * @param {string} idScnd второй id клетки
+       * @param {number} nullIdScnd второй id пустой клетки
+       * @returns {boolean}
+       */
+      _getCloseCell(idFrst, nullIdFrst, idScnd, nullIdScnd) {
+         return (idFrst == nullIdFrst && Math.abs(idScnd - nullIdScnd) == 1);
+      }
 
-        // нахожу индекс пустой клетки в массиве
-        this._arrayNumbers.find((el, i) => {
-            if (el === '') {
-                nullCell = i;
+      /**
+       * проверка первого нажатия, если игра уже запущена, то таймер снова не запускается
+       */
+      _bodyClick() {
+         if (this._isFirstStart) {
+            this._isFirstStart = false;
+
+            // установка таймера
+            this._timerInterval = setInterval(this._setTimer.bind(this), 1000);
+         }
+      }
+
+      /**
+       * регулировка таймера, установка отображения на странице
+       */
+      _setTimer() {
+         this._timeCount++;
+
+         // определение секунд без минут
+         const maxSec = this._timeCount - (CONSTANTS.minute * this._timeMin);
+         let sec = maxSec;
+
+         if (maxSec.toString().length < 2) {
+            sec = `0${maxSec}`
+         }
+
+         // отображение времени на странице, в зависимости от количества минут
+         // если минута еще не прошла, то показываю только секунды
+         this.timer.innerHTML = this._timeMin ? `${this._timeMin}:${sec}` : `0:${sec}`;
+
+         // определяю момент, когда количество секунд будет составлять минуту (60 сек = 1 мин)
+         // и отображаю на странице минут:00 секунд
+         if (!(this._timeCount % CONSTANTS.minute)) {
+            this._timeMin++;
+            this.timer.innerHTML = `${this._timeMin}:00`;
+         }
+      }
+
+      /**
+       * обнуление таймера
+       */
+      _resetTimer() {
+         this._timeCount = 0;
+         this._timeMin = 0;
+         this._isFirstStart = true;
+         clearInterval(this._timerInterval);
+      }
+
+      /**
+       * меняю последовательность элементов после клика в скопированном массиве
+       * @param {Object} evt 
+       */
+      _changeArrOrder(evt) {
+         const target = evt.target;
+         let nullCell;
+
+         // нахожу индекс пустой клетки в массиве
+         this._chosenArr.find((el, i) => {
+            if (!el) {
+               nullCell = i;
             }
-        });
+         });
 
-        // меняю положения элементов в массиве
-        this._arrayNumbers.forEach((el, i) => {
+         // меняю положения элементов в массиве
+         this._chosenArr.forEach((el, i) => {
             if (el === target.innerHTML) {
-                // меняю элемент нажатой клетки на пустую строку
-                this._arrayNumbers[i] = this._arrayNumbers[nullCell];
-                // элемент пустой строки заполняю данными нажатой клетки
-                this._arrayNumbers[nullCell] = target.innerHTML;
+               // меняю элемент нажатой клетки на пустую строку
+               this._chosenArr[i] = this._chosenArr[nullCell];
+               // элемент пустой строки заполняю данными нажатой клетки
+               this._chosenArr[nullCell] = target.innerHTML;
             }
-        });
-    }
+         });
+      }
 
-    /**
-     * условия показа сообщения о победе
-     */
-    _getWinMessage() {
-        // пробегаю весь массив, если все цифры соответстуют парвильному порядку, 
-        // то показываю alert о победе
-        const isDontPass = !!this._arrayNumbers.find((el, i) => {
+      /**
+       * условия показа сообщения о победе
+       */
+      _checkWinState() {
+         // проверяю весь массив, если все цифры соответстуют парвильному порядку, 
+         // то показываю alert о победе
+         const isDontPass = !!this._chosenArr.find((el, i) => {
             const elNumber = parseInt(el);
 
-            // если elNumber не null или undefinded И не соответствует (индексу + 1), то победу не засчитываю
+            // если elNumber не null или undefinded и не соответствует (индексу + 1), то победу не засчитываю
             if (elNumber && elNumber !== ++i) {
-                return true;
+               return true;
             }
-        });
+         });
 
-        if (!isDontPass) {
-            alert('Победа!');
-        }
-    }
+         if (!isDontPass) {
+            alert(`Вы победили! Ваше время: ${this.timer.innerHTML}`);
+            // остановка таймера
+            clearInterval(this._timerInterval);
+         }
+      }
 
-    /**
-     * нахожу ID по горизонтали и вертикали пустой клетки
-     */
-    _findClearCell() {
-        for (let i = 0; i < 4; i++) {
-            this._stringDataObj[i].forEach((el, j) => {
-                if (el === '') {
-                    this._ei = i;
-                    this._ej = j;
-                }
-            });
-        }
-    }
+      _initConst() {
+         this.body = document.querySelector('.table');
+         this.button = document.querySelector('button');
+         this.buttonSelect = document.querySelector('select');
+         this.timer = document.querySelector('.timer-text');
+      }
 
-    /**
-     * начинаю новую игру
-     */
-    _startNewGame() {
-        this._shuffleArray();
-        this._getStringData();
-        this._fillTableBody();
-    }
+      /**
+       * начинаю новую игру
+       */
+      _startNewGame() {
+         this._checkSuccessArr();
+         this._shuffleArray();
+         this._getStringData();
+         this._resetTimer();
+         this._fillTableBody();
+      }
 
-    _initConst() {
-        this.body = document.querySelector('.table');
-        this.button = document.querySelector('button');
-    }
+      _initEvt() {
+         this.body.addEventListener('click', this._cellClick.bind(this));
+         this.body.addEventListener('click', this._bodyClick.bind(this));
+         this.button.addEventListener('click', this._startNewGame.bind(this));
+         this.buttonSelect.addEventListener('change', this._selectFieldSize.bind(this));
+      }
+   }
 
-    _initEvt() {
-        this.body.addEventListener('click', this._cellClick.bind(this));
-        this.button.addEventListener('click', this._startNewGame.bind(this));
-    }
-}
-
-new Table({
-    ei: null,
-    ej: null,
-    stringDataObj: {},
-    arrayNumbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '']
-});
+   new Table({
+      arrayNumbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '']
+   });
+})();
